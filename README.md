@@ -11,6 +11,25 @@ It is a **countdown, not a calendar**. The number of days is the hero, large eno
 
 The optional upcoming list stays in countdown terms ("⛷️ Sportlov om 97 dagar"), smaller and dimmer. The lov name is always shown as text; the emoji are decoration, not the only carrier of meaning.
 
+## Screenshots
+
+Rendered from the real Huddinge 2026/2027 calendar, using `debugDate` to show each state.
+
+<table>
+<tr>
+<td align="center" width="50%"><img src="docs/before.png" alt="Countdown: Christmas tree emoji, 26, dagar kvar till jullovet, with Sportlov, Påsklov and Sommarlov listed below as om 97, 128 and 200 dagar" width="100%"><br><sub><b>Before a lov</b>: 22 Nov 2026, 26 days to jullov</sub></td>
+<td align="center" width="50%"><img src="docs/tomorrow.png" alt="Countdown: skier emoji, 1, dag kvar – imorgon är det sportlov" width="100%"><br><sub><b>The day before</b>: Fri 26 Feb 2027, free from Saturday</sub></td>
+</tr>
+<tr>
+<td align="center"><img src="docs/during.png" alt="During sportlov: Det är sportlov, 4 lovdagar kvar, seven-segment bar with three dark and four lit" width="100%"><br><sub><b>During sportlov</b>: 2 Mar 2027, 4 of 7 days left</sub></td>
+<td align="center"><img src="docs/lastday.png" alt="Last day of sportlov: 1 lovdag kvar – sista dagen, one lit segment of seven" width="100%"><br><sub><b>Last day</b>: 5 Mar 2027, one segment left</sub></td>
+</tr>
+<tr>
+<td align="center"><img src="docs/jullov.png" alt="During jullov: Det är jullov, 11 lovdagar kvar, continuous bar 11/25 lit" width="100%"><br><sub><b>Long lov</b>: 1 Jan 2027, continuous bar (11 of 25 days)</sub></td>
+<td align="center"><img src="docs/summer.png" alt="Summer: a large sun emoji, Glad sommar, Sommarlovet är här – njut av ledigheten" width="100%"><br><sub><b>Summer</b>: 15 Jul 2027, the sun until school restarts</sub></td>
+</tr>
+</table>
+
 ## Data source
 
 Dates come from [skollov.nu](https://skollov.nu), which publishes one iCal file per municipality at `https://skollov.nu/kalender/<kommun>.ics`.
