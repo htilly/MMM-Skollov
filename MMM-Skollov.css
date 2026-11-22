@@ -1,19 +1,19 @@
 /* MMM-Skollov
- * Waiting state: calm, white-on-black like the rest of the mirror.
- * Holiday state: warm accent, glow and a little bounce — it should look like a party.
- * Upcoming list: secondary, smaller and dimmer.
+ *
+ * A countdown, not a calendar. The number is by far the largest thing on
+ * screen; from across the room only the emoji and the number should resolve.
+ * Everything else is supporting text, smaller and dimmer.
  */
 
 .MMM-Skollov {
 	--skollov-accent: #ffd166;
 	--skollov-warn: #f4a261;
-	--skollov-dim: #999;
+	--skollov-seg-dark: rgba(255, 255, 255, 0.12);
 }
 
 .skollov {
 	text-align: center;
-	line-height: 1.2;
-	min-width: 14em;
+	line-height: 1.15;
 }
 
 .region.left .skollov,
@@ -21,101 +21,57 @@
 	display: inline-block;
 }
 
-/* --- hero ------------------------------------------------------------- */
+/* --- hero: emoji + number --------------------------------------------- */
 
-.skollov-emoji {
-	font-size: 2.6em;
-	line-height: 1.1;
-}
-
-.skollov-name {
-	margin-top: 0.1em;
-	letter-spacing: 0.02em;
-}
-
-.skollov-count {
+.skollov-hero {
 	display: flex;
-	align-items: baseline;
+	align-items: center;
 	justify-content: center;
-	gap: 0.3em;
-	margin: 0.1em 0;
+	gap: 0.15em;
+	font-size: 1em;
 }
 
 .skollov-num {
-	font-size: 4.2em;
+	font-size: 9em;
 	font-weight: 300;
-	line-height: 1;
+	line-height: 0.95;
+	letter-spacing: -0.03em;
 	font-variant-numeric: tabular-nums;
 }
 
-.skollov-num--word {
-	font-size: 2.2em;
-	font-weight: 400;
-}
-
-.skollov-unit {
-	color: #ccc;
+.skollov-emoji {
+	font-size: 4.2em;
+	line-height: 1;
 }
 
 .skollov-line {
-	margin-top: 0.2em;
+	margin-top: 0.15em;
 }
 
 .skollov-sub {
-	margin-top: 0.3em;
+	margin-top: 0.4em;
 }
 
 /* --- during a holiday ------------------------------------------------- */
 
-.skollov--during .skollov-hero--during {
-	padding: 0.5em 0.8em 0.6em;
+.skollov-main--during {
+	padding: 0.4em 0.8em 0.6em;
 	border-radius: 0.6em;
-	background: radial-gradient(ellipse at top, rgba(255, 209, 102, 0.18), rgba(255, 209, 102, 0) 70%);
+	background: radial-gradient(ellipse at center, rgba(255, 209, 102, 0.14), rgba(255, 209, 102, 0) 70%);
 }
 
 .skollov-banner {
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	gap: 0.35em;
+	color: var(--skollov-accent);
 }
 
-.skollov-banner .skollov-emoji {
-	font-size: 1.8em;
-}
-
-.skollov--during .skollov-banner-text,
 .skollov--during .skollov-num {
 	color: var(--skollov-accent);
-	text-shadow: 0 0 0.35em rgba(255, 209, 102, 0.45);
-}
-
-.skollov--during .skollov-num--word {
-	font-size: 2em;
-}
-
-.skollov-progress {
-	width: 70%;
-	height: 0.3em;
-	margin: 0.45em auto 0.2em;
-	border-radius: 0.15em;
-	background: rgba(255, 255, 255, 0.15);
-	overflow: hidden;
-}
-
-.skollov-progress-fill {
-	height: 100%;
-	border-radius: 0.15em;
-	background: var(--skollov-accent);
+	text-shadow: 0 0 0.2em rgba(255, 209, 102, 0.35);
 }
 
 .skollov--animate .skollov-emoji--bounce {
 	display: inline-block;
-	animation: skollov-bounce 2.4s ease-in-out infinite;
-}
-
-.skollov--animate .skollov-emoji--late {
-	animation-delay: 1.2s;
+	animation: skollov-bounce 2.6s ease-in-out infinite;
 }
 
 @keyframes skollov-bounce {
@@ -126,63 +82,104 @@
 	}
 
 	30% {
-		transform: translateY(-0.18em) rotate(-8deg);
+		transform: translateY(-0.12em) rotate(-8deg);
 	}
+}
+
+/* --- remaining-days bar ------------------------------------------------
+ * Quiet, under the number. Full width never changes, so the proportion is
+ * visible; elapsed days go dark, remaining days stay lit. No transitions:
+ * it changes once a day, on the day boundary.
+ */
+
+.skollov-bar {
+	display: flex;
+	width: 80%;
+	max-width: 18em;
+	height: 0.45em;
+	margin: 0.6em auto 0.1em;
+}
+
+.skollov-bar--segments {
+	gap: 0.2em;
+}
+
+.skollov-seg {
+	flex: 1 1 0;
+	border-radius: 0.12em;
+	background: var(--skollov-seg-dark);
+}
+
+.skollov-seg--lit {
+	background: var(--skollov-accent);
+	opacity: 0.85;
+}
+
+.skollov-bar--continuous {
+	justify-content: flex-end; /* remaining days sit at the right, like the segments */
+	border-radius: 0.12em;
+	background: var(--skollov-seg-dark);
+	overflow: hidden;
+}
+
+.skollov-bar-fill {
+	background: var(--skollov-accent);
+	opacity: 0.85;
+}
+
+/* --- summer: the sun -------------------------------------------------- */
+
+.skollov-sun {
+	font-size: 9em;
+	line-height: 1.05;
+	filter: drop-shadow(0 0 0.15em rgba(255, 209, 102, 0.55));
+}
+
+.skollov-summer-title {
+	font-size: 2.4em;
+	line-height: 1.1;
+	color: var(--skollov-accent);
+}
+
+/* --- messages ---------------------------------------------------------- */
+
+.skollov-message,
+.skollov-main--none .skollov-sub {
+	max-width: 22em;
+	margin-left: auto;
+	margin-right: auto;
+}
+
+.skollov-message-emoji {
+	font-size: 2em;
+}
+
+.skollov-warning {
+	max-width: 24em;
+	margin: 0.7em auto 0;
+	color: var(--skollov-warn);
+}
+
+/* --- upcoming: countdown lines, smaller and dimmer --------------------- */
+
+.skollov-upcoming {
+	margin-top: 0.9em;
+}
+
+.skollov-up {
+	line-height: 1.5;
+}
+
+.skollov-up-emoji {
+	margin-right: 0.3em;
+}
+
+.skollov-up-until {
+	margin-left: 0.3em;
 }
 
 @media (prefers-reduced-motion: reduce) {
 	.skollov--animate .skollov-emoji--bounce {
 		animation: none;
 	}
-}
-
-/* --- no data / messages ----------------------------------------------- */
-
-.skollov-hero--none .skollov-emoji,
-.skollov-big-emoji {
-	font-size: 2em;
-	opacity: 0.8;
-}
-
-.skollov-hero--none .skollov-sub,
-.skollov-message,
-.skollov-note {
-	max-width: 22em;
-	margin-left: auto;
-	margin-right: auto;
-}
-
-.skollov-warning {
-	margin-top: 0.7em;
-	color: var(--skollov-warn);
-	max-width: 24em;
-	margin-left: auto;
-	margin-right: auto;
-}
-
-/* --- upcoming list (secondary) ---------------------------------------- */
-
-.skollov-upcoming {
-	margin: 0.9em auto 0;
-	border-collapse: collapse;
-	color: var(--skollov-dim);
-}
-
-.skollov-upcoming td {
-	padding: 0.1em 0.35em;
-	text-align: left;
-	white-space: nowrap;
-}
-
-.skollov-upcoming .skollov-up-emoji {
-	text-align: center;
-}
-
-.skollov-upcoming .skollov-up-name {
-	color: #bbb;
-}
-
-.skollov-upcoming .skollov-up-until {
-	text-align: right;
-	padding-left: 0.8em;
 }

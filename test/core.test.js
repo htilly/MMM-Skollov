@@ -42,14 +42,6 @@ test("all-day DTEND is exclusive: month and leap-year boundaries", () => {
 	assert.equal(core.lastDayOf(ev("2027-06-10", "2027-06-11")), "2027-06-10");
 });
 
-test("remaining-days count uses the exclusive end", () => {
-	// Sportlov 1–5 March: on Monday 1 March, 5 days remain (including today).
-	const t = core.phraseDuring(byType.sport, "2027-03-01");
-	assert.equal(t.big, "5");
-	assert.equal(core.phraseDuring(byType.sport, "2027-03-04").big, "2");
-	assert.equal(core.phraseDuring(byType.sport, "2027-03-05").big, "Sista lovdagen!");
-});
-
 /* -------------------------------------------------------------- parsing */
 
 test("parses the real feed: five holidays, names, emoji, calendar name", () => {
@@ -95,43 +87,83 @@ test("rejects non-calendar input", () => {
 	assert.throws(() => core.parseICS("Kommunen hittades inte."));
 });
 
+/* ------------------------------------------- first free day (weekend rule) */
+
+const view = (today, opts) => core.computeView(holidays, today, opts);
+const vh = (type, opts) => core.computeView(holidays, "2026-08-01", Object.assign({ maxUpcoming: 9 }, opts)).upcoming.concat(
+	core.computeView(holidays, "2026-08-01", opts).next
+).find((h) => h.type === type);
+
+test("countdown targets the first free day: Monday starts move to the Saturday", () => {
+	// htilly's table for Huddinge 2026/2027.
+	assert.equal(vh("autumn").freeFrom, "2026-10-24"); // mån 26/10 -> lör 24/10
+	assert.equal(vh("christmas").freeFrom, "2026-12-18"); // fredag, oförändrat
+	assert.equal(vh("sport").freeFrom, "2027-02-27"); // mån 1/3 -> lör 27/2
+	assert.equal(vh("easter").freeFrom, "2027-03-30"); // tisdag, oförändrat
+	assert.equal(vh("summer").freeFrom, "2027-06-10"); // torsdag, oförändrat
+});
+
+test("weekend rule can be switched off", () => {
+	const off = { includeWeekendBefore: false };
+	assert.equal(vh("autumn", off).freeFrom, "2026-10-26");
+	assert.equal(vh("sport", off).freeFrom, "2027-03-01");
+	assert.equal(view("2027-02-27", off).state, "before");
+	assert.equal(core.phraseBefore(view("2027-02-27", off).next, "2027-02-27").big, "2");
+});
+
+test("no gap: the weekend before a Monday start is part of the lov", () => {
+	for (const day of ["2027-02-27", "2027-02-28", "2027-03-01"]) {
+		const v = view(day);
+		assert.equal(v.state, "during", day);
+		assert.equal(v.current.type, "sport", day);
+	}
+	// Friday before: one day left of the countdown, never "0 dagar".
+	const fri = view("2027-02-26");
+	assert.equal(fri.state, "before");
+	assert.equal(core.phraseBefore(fri.next, "2027-02-26").big, "1");
+});
+
 /* ------------------------------------------------------- display states */
 
-test("state: before a holiday counts down to the next one", () => {
-	const v = core.computeView(holidays, "2026-11-22", { maxUpcoming: 3 });
+test("state: before — counts down in days to the next lov", () => {
+	const v = view("2026-11-22", { maxUpcoming: 3 });
 	assert.equal(v.state, "before");
 	assert.equal(v.next.type, "christmas");
-	assert.deepEqual(
-		v.upcoming.map((h) => h.type),
-		["sport", "easter", "summer"]
-	);
 	const t = core.phraseBefore(v.next, "2026-11-22");
 	assert.equal(t.big, "26");
-	assert.equal(t.unit, "dagar");
-	assert.equal(t.line, "kvar till jullovet!");
-	assert.equal(t.sub, "Fredag 18 december");
+	assert.equal(t.line, "dagar kvar till jullovet!");
+	assert.equal(t.sub, "Ledigt från fredag 18 december");
 	assert.equal(v.staleWarning, false);
 });
 
-test("state: before — proximity phrasing", () => {
-	// Sportlov starts Monday 1 March 2027.
-	const tomorrow = core.phraseBefore(byType.sport, "2027-02-28");
-	assert.equal(tomorrow.big, "Imorgon");
-	assert.equal(tomorrow.line, "är det sportlov! 🎉");
-	const friday = core.phraseBefore(byType.sport, "2027-02-26");
-	assert.equal(friday.big, "3");
-	assert.equal(friday.line, "kvar till sportlovet – på måndag!");
-	assert.equal(core.phraseBefore(byType.sport, "2027-02-14").line, "kvar till sportlovet!");
-	assert.equal(core.phraseUntil(byType.sport, "2027-02-28"), "imorgon");
-	assert.equal(core.phraseUntil(byType.sport, "2027-02-26"), "på måndag");
-	assert.equal(core.phraseUntil(byType.sport, "2027-02-14"), "om 15 dagar");
+test("state: before — proximity phrasing targets the free day", () => {
+	const sport = view("2027-02-20").next;
+	assert.equal(sport.type, "sport");
+	assert.deepEqual(
+		[core.phraseBefore(sport, "2027-02-26").big, core.phraseBefore(sport, "2027-02-26").line],
+		["1", "dag kvar – imorgon är det sportlov! 🎉"]
+	);
+	assert.equal(core.phraseBefore(sport, "2027-02-24").line, "dagar kvar till sportlovet – på lördag!");
+	assert.equal(core.phraseBefore(sport, "2027-02-14").line, "dagar kvar till sportlovet!");
+	assert.equal(core.phraseBefore(sport, "2027-02-14").big, "13");
 });
 
-test("state: during a holiday shows days remaining and the next ones", () => {
-	const v = core.computeView(holidays, "2027-03-03", { maxUpcoming: 2 });
+test("upcoming list is countdown-framed, not dated", () => {
+	const v = view("2026-11-22", { maxUpcoming: 3 });
+	assert.deepEqual(
+		v.upcoming.map((h) => `${h.name} ${core.phraseUntil(h, "2026-11-22")}`),
+		["Sportlov om 97 dagar", "Påsklov om 128 dagar", "Sommarlov om 200 dagar"]
+	);
+	const sport = v.upcoming[0];
+	assert.equal(core.phraseUntil(sport, "2027-02-26"), "imorgon");
+	assert.equal(core.phraseUntil(sport, "2027-02-24"), "på lördag");
+	assert.equal(view("2026-11-22", { maxUpcoming: 0 }).upcoming.length, 0);
+});
+
+test("state: during — big number is lovdagar kvar, today included", () => {
+	const v = view("2027-03-03", { maxUpcoming: 2 });
 	assert.equal(v.state, "during");
 	assert.equal(v.current.type, "sport");
-	assert.equal(v.next, null);
 	assert.deepEqual(
 		v.upcoming.map((h) => h.type),
 		["easter", "summer"]
@@ -139,51 +171,143 @@ test("state: during a holiday shows days remaining and the next ones", () => {
 	const t = core.phraseDuring(v.current, "2027-03-03");
 	assert.equal(t.banner, "Det är sportlov!");
 	assert.equal(t.big, "3");
-	assert.equal(t.unit, "lovdagar kvar");
-	assert.equal(t.line, "Ledigt t.o.m. fredag 5 mars");
-	assert.equal(core.phraseDuring(v.current, "2027-03-01").banner, "Idag börjar sportlovet!");
+	assert.equal(t.line, "lovdagar kvar");
+	assert.equal(t.sub, "Ledigt t.o.m. fredag 5 mars");
+	assert.equal(core.phraseDuring(v.current, "2027-02-27").banner, "Äntligen sportlov!");
+	assert.equal(core.phraseDuring(v.current, "2027-02-27").big, "7");
+	assert.equal(core.phraseDuring(v.current, "2027-03-04").line, "lovdagar kvar – imorgon är sista dagen");
+	assert.equal(core.phraseDuring(v.current, "2027-03-05").big, "1");
+	assert.match(core.phraseDuring(v.current, "2027-03-05").line, /^lovdag kvar – sista dagen/);
+});
+
+test("state: during ends on the last day; the DTEND date is not a lov day", () => {
+	assert.equal(view("2027-03-05").state, "during");
+	const after = view("2027-03-06");
+	assert.equal(after.state, "before");
+	assert.equal(after.next.type, "easter");
 });
 
 test("state: during — jullov spans the new year", () => {
-	const v = core.computeView(holidays, "2027-01-01");
-	assert.equal(v.state, "during");
+	const v = view("2027-01-01");
 	assert.equal(v.current.type, "christmas");
 	assert.equal(core.phraseDuring(v.current, "2027-01-01").big, "11");
 });
 
-test("state: during — summer is open-ended and shown for summerGreetingDays", () => {
-	const first = core.computeView(holidays, "2027-06-10");
-	assert.equal(first.state, "during");
-	assert.equal(core.phraseDuring(first.current, "2027-06-10").banner, "Idag börjar sommarlovet!");
-	assert.equal(core.phraseDuring(first.current, "2027-06-10").progress, null);
-	assert.equal(core.computeView(holidays, "2027-07-15").state, "during");
-	// 10 June + 70 days - 1 = 18 Aug is the last greeting day.
-	assert.equal(core.computeView(holidays, "2027-08-18", { summerGreetingDays: 70 }).state, "during");
-	assert.equal(core.computeView(holidays, "2027-08-19", { summerGreetingDays: 70 }).state, "none");
-	assert.equal(core.computeView(holidays, "2027-06-12", { summerGreetingDays: 1 }).state, "none");
+/* -------------------------------------------------------------- the bar */
+
+test("bar: sportlov is seven segments (Sat–Fri), all lit on day one", () => {
+	const sport = view("2027-02-27").current;
+	const first = core.barModel(sport, "2027-02-27");
+	assert.equal(first.segmented, true);
+	assert.equal(first.total, 7);
+	assert.deepEqual(first.segments, [true, true, true, true, true, true, true]);
 });
 
-test("state: none when the data has run out", () => {
-	const v = core.computeView(holidays, "2027-09-01");
-	assert.equal(v.state, "none");
-	assert.equal(v.current, null);
-	assert.equal(v.next, null);
-	assert.deepEqual(v.upcoming, []);
+test("bar: one segment goes dark per day, exactly one lit on the last day", () => {
+	const sport = view("2027-02-27").current;
+	assert.deepEqual(core.barModel(sport, "2027-03-01").segments, [false, false, true, true, true, true, true]);
+	const last = core.barModel(sport, "2027-03-05");
+	assert.equal(last.remaining, 1);
+	assert.deepEqual(last.segments, [false, false, false, false, false, false, true]);
+	// Lit count always equals the big number.
+	for (let d = 0; d < 7; d++) {
+		const day = core.addDays("2027-02-27", d);
+		const lit = core.barModel(sport, day).segments.filter(Boolean).length;
+		assert.equal(String(lit), core.phraseDuring(sport, day).big, day);
+	}
+});
+
+test("bar: without the weekend rule sportlov is five segments", () => {
+	const sport = view("2027-03-01", { includeWeekendBefore: false }).current;
+	assert.equal(core.barModel(sport, "2027-03-01").total, 5);
+});
+
+test("bar: long holidays switch to a continuous bar", () => {
+	const jul = view("2027-01-01").current;
+	const bar = core.barModel(jul, "2027-01-01");
+	assert.equal(bar.total, 25); // 18 Dec – 11 Jan
+	assert.equal(bar.segmented, false);
+	assert.equal(bar.segments, null);
+	assert.equal(bar.remaining, 11);
+	assert.equal(bar.litFraction, 11 / 25);
+	assert.equal(core.barModel(jul, "2026-12-18").litFraction, 1);
+	assert.equal(core.barModel(jul, "2027-01-11").litFraction, 1 / 25);
+	// The threshold is inclusive.
+	const two = { freeFrom: "2027-01-01", lastDay: core.addDays("2027-01-01", core.MAX_SEGMENTS - 1) };
+	assert.equal(core.barModel(two, "2027-01-01").segmented, true);
+	assert.equal(core.barModel({ ...two, lastDay: core.addDays(two.lastDay, 1) }, "2027-01-01").segmented, false);
+});
+
+/* ------------------------------------------------------- summer and sun */
+
+test("summer start is a marker: countdown to it, then the sun — never '1 dag kvar'", () => {
+	const eve = view("2027-06-09");
+	assert.equal(eve.state, "before");
+	assert.equal(core.phraseBefore(eve.next, "2027-06-09").line, "dag kvar – imorgon är det sommarlov! 🎉");
+
+	const first = view("2027-06-10");
+	assert.equal(first.state, "summer");
+	assert.equal(first.current.type, "summer");
+	assert.equal(core.phraseSummer(first.current, "2027-06-10").title, "Idag börjar sommarlovet!");
+	assert.equal(core.phraseSummer(first.current, "2027-07-15").title, "Glad sommar!");
+	assert.equal(view("2027-07-15").state, "summer");
+});
+
+test("sun lasts until summerSunUntil, then the calendar has run out", () => {
+	assert.equal(view("2027-08-20").state, "summer");
+	assert.equal(view("2027-08-21").state, "none");
+	assert.equal(view("2027-08-11", { summerSunUntil: "08-10" }).state, "none");
+	const none = view("2027-09-01");
+	assert.equal(none.current, null);
+	assert.equal(none.next, null);
+	assert.deepEqual(none.upcoming, []);
 	assert.equal(core.computeView([], "2027-01-01").state, "none");
 });
 
-test("stale warning when the last event is within the threshold", () => {
-	// Last known date is 10 June 2027.
-	assert.equal(core.computeView(holidays, "2027-05-10", { staleWarningDays: 30 }).staleWarning, false);
-	assert.equal(core.computeView(holidays, "2027-05-11", { staleWarningDays: 30 }).staleWarning, true);
-	assert.equal(core.computeView(holidays, "2027-06-20").staleWarning, true);
-	// In the none state the main message already says it; no duplicate warning.
-	assert.equal(core.computeView(holidays, "2027-09-01").staleWarning, false);
+test("a newly published läsår replaces the sun with a countdown", () => {
+	const next = core.toHolidays(
+		core.parseICS(
+			[
+				"BEGIN:VCALENDAR",
+				"BEGIN:VEVENT",
+				"UID:huddinge-autumn-20271025@skollov.nu",
+				"DTSTART;VALUE=DATE:20271025",
+				"DTEND;VALUE=DATE:20271030",
+				"SUMMARY:Höstlov – Huddinge",
+				"END:VEVENT",
+				"END:VCALENDAR"
+			].join("\r\n")
+		).events
+	);
+	const v = core.computeView(next, "2027-07-15");
+	assert.equal(v.state, "before");
+	assert.equal(v.next.freeFrom, "2027-10-23");
+	assert.equal(core.phraseBefore(v.next, "2027-07-15").big, "100");
 });
 
-test("maxUpcoming limits the list, 0 hides it", () => {
-	assert.equal(core.computeView(holidays, "2026-11-22", { maxUpcoming: 1 }).upcoming.length, 1);
-	assert.equal(core.computeView(holidays, "2026-11-22", { maxUpcoming: 0 }).upcoming.length, 0);
+test("data ending without a summer marker gets no sun, and warns ahead", () => {
+	const noSummer = holidays.filter((h) => h.type !== "summer");
+	assert.equal(core.computeView(noSummer, "2027-02-01").staleWarning, false);
+	assert.equal(core.computeView(noSummer, "2027-03-10").staleWarning, true);
+	assert.equal(core.computeView(noSummer, "2027-04-10").state, "none");
+	// Normal data ending in summer never shows the advance warning: the sun covers it.
+	assert.equal(view("2027-06-01").staleWarning, false);
+});
+
+test("one-day marker detection", () => {
+	const one = (summary, uid) =>
+		core.toHolidays([{ uid, summary, dtstart: { date: "2027-06-10", allDay: true }, dtend: { date: "2027-06-11", allDay: true } }])[0];
+	assert.equal(one("Sommarlovet börjar – Huddinge").openEnded, true);
+	assert.equal(one("Lovet börjar – Testby").openEnded, true);
+	assert.equal(one("Studiedag – Testby").openEnded, false);
+	assert.equal(byType.sport.openEnded, false);
+});
+
+test("today is computed in Europe/Stockholm", () => {
+	// 23:30 UTC on 28 Feb is already 1 March in Stockholm.
+	assert.equal(core.todayIn("Europe/Stockholm", new Date("2027-02-28T23:30:00Z")), "2027-03-01");
+	assert.equal(core.todayIn("Europe/Stockholm", new Date("2027-07-01T21:59:00Z")), "2027-07-01");
+	assert.equal(core.todayIn("Europe/Stockholm", new Date("2027-07-01T22:00:00Z")), "2027-07-02");
 });
 
 test("slugify matches skollov.nu slugs", () => {

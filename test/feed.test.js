@@ -56,3 +56,24 @@ test("no cache and no network yields an empty payload with the error", async () 
 	assert.deepEqual(data.holidays, []);
 	assert.equal(data.error.status, 404);
 });
+
+test("a failed fetch in March keeps counting down; it never produces a sun", async () => {
+	const core = require("../skollov-core.js");
+	const cacheFile = tmpCache();
+	await feed.refresh({ slug: "huddinge", cacheFile, fetchImpl: ok(fixture), now: () => 1000 });
+	const data = await feed.refresh({ slug: "huddinge", cacheFile, fetchImpl: offline, now: () => 2000 });
+	assert.ok(data.error);
+	const v = core.computeView(data.holidays, "2027-03-10");
+	assert.equal(v.state, "before");
+	assert.equal(v.next.type, "easter");
+});
+
+test("a successful fetch of the next läsår replaces the cache", async () => {
+	const cacheFile = tmpCache();
+	await feed.refresh({ slug: "huddinge", cacheFile, fetchImpl: ok(fixture), now: () => 1000 });
+	const nextYear = fixture.replace(/2026/g, "2027X").replace(/2027(?!X)/g, "2028").replace(/2027X/g, "2027");
+	const data = await feed.refresh({ slug: "huddinge", cacheFile, fetchImpl: ok(nextYear), now: () => 2000 });
+	assert.equal(data.error, null);
+	assert.equal(data.holidays[0].start, "2027-10-26");
+	assert.equal(JSON.parse(fs.readFileSync(cacheFile, "utf8")).holidays[0].start, "2027-10-26");
+});

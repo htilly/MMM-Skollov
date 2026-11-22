@@ -185,7 +185,8 @@
 				const lastDay = lastDayOf(e);
 				const cleaned = cleanSummary(e.summary);
 				// skollov.nu only publishes the first day of summer, as a one-day event.
-				const openEnded = type === "summer" && lastDay === start;
+				// It is a start marker, not a one-day holiday: no end to count towards.
+				const openEnded = lastDay === start && (type === "summer" || /börjar/i.test(e.summary || ""));
 				let name = meta ? meta.name : cleaned || "Lov";
 				// Keep the source's own word if it differs (e.g. "Vinterlov" for sportlov).
 				if (meta && type !== "summer" && /lov$/i.test(cleaned) && cleaned.toLowerCase() !== meta.name.toLowerCase()) {
@@ -208,38 +209,111 @@
 	/* ----------------------------------------------------------------- view */
 
 	/**
-	 * Decide what the mirror should show on `today`.
+	 * The first actually free day of a holiday.
 	 *
-	 * Returns { state, current, next, upcoming, staleWarning, lastDataDay }
-	 *   state "during": today is inside a holiday (or inside the summer
-	 *                   greeting window after "Sommarlovet börjar")
-	 *   state "before": a holiday lies ahead; `next` is it
-	 *   state "none":   nothing current or ahead in the data
+	 * When a lov starts on a Monday the last school day is the Friday before,
+	 * so the family is free from Saturday. Counting down to the Monday would
+	 * leave the weekend belonging to no state at all, so the countdown, the
+	 * "during" state and the bar all start from this same adjusted date.
+	 */
+	function freeFrom(h, includeWeekendBefore) {
+		return includeWeekendBefore && weekday(h.start) === 1 ? addDays(h.start, -2) : h.start;
+	}
+
+	const VIEW_DEFAULTS = {
+		maxUpcoming: 3,
+		includeWeekendBefore: true,
+		summerSunUntil: "08-20",
+		staleWarningDays: 30
+	};
+
+	/**
+	 * Decide what the mirror should show on `today` ("YYYY-MM-DD", Stockholm).
+	 *
+	 * Returns { state, current, next, upcoming, staleWarning, lastDataDay }:
+	 *   "before"  a holiday lies ahead; `next` is it (countdown).
+	 *   "during"  today is inside a bounded holiday; `current` is it.
+	 *   "summer"  the summer-start marker has been reached and nothing newer is
+	 *             in the data. This is the big sun. It lasts until
+	 *             `summerSunUntil` (MM-DD, in the marker's year) — after that
+	 *             school has restarted and missing data is a real problem.
+	 *   "none"    nothing current or ahead: the calendar has run out.
+	 *
+	 * Every holiday returned carries `freeFrom`, the date counted towards.
+	 * The decision depends only on dates in the data, never on fetch status,
+	 * so a failed fetch can never produce a sun.
 	 */
 	function computeView(holidays, today, options) {
-		const opts = Object.assign({ maxUpcoming: 3, staleWarningDays: 30, summerGreetingDays: 70 }, options || {});
-		const list = (holidays || []).slice().sort((a, b) => (a.start < b.start ? -1 : 1));
+		const opts = Object.assign({}, VIEW_DEFAULTS, options || {});
+		const list = (holidays || [])
+			.map((h) => Object.assign({}, h, { freeFrom: freeFrom(h, opts.includeWeekendBefore) }))
+			.sort((a, b) => (a.freeFrom < b.freeFrom ? -1 : a.freeFrom > b.freeFrom ? 1 : 0));
 
-		const effectiveLast = (h) => (h.openEnded ? addDays(h.start, Math.max(1, opts.summerGreetingDays) - 1) : h.lastDay);
+		const lastDataDay = list.reduce((max, h) => (max === null || h.lastDay > max ? h.lastDay : max), null);
+		const last = list.find((h) => h.lastDay === lastDataDay) || null;
 
-		const current = list.find((h) => h.start <= today && today <= effectiveLast(h)) || null;
-		const future = list.filter((h) => h.start > today);
-		const next = current ? null : future[0] || null;
+		const current = list.find((h) => !h.openEnded && h.freeFrom <= today && today <= h.lastDay) || null;
+		const future = list.filter((h) => h.freeFrom > today);
+		const max = Math.max(0, opts.maxUpcoming);
 
-		const upcomingFrom = current ? future : future.slice(1);
-		const upcoming = upcomingFrom.slice(0, Math.max(0, opts.maxUpcoming));
+		if (current) {
+			return finish("during", current, null, future.slice(0, max));
+		}
+		if (future.length > 0) {
+			return finish("before", null, future[0], future.slice(1, 1 + max));
+		}
+		// Nothing ahead. A sun if the data ended with summer starting and school
+		// has not restarted yet; otherwise the calendar has simply run out.
+		if (last && last.openEnded && last.freeFrom <= today) {
+			const cutoff = `${last.start.slice(0, 4)}-${opts.summerSunUntil}`;
+			if (today <= cutoff) return finish("summer", last, null, []);
+		}
+		return finish("none", null, null, []);
 
-		// The last date the data actually knows about. For the open-ended
-		// summer marker that is its start: nothing is known after it.
-		const lastDataDay = list.length ? list.reduce((max, h) => (h.lastDay > max ? h.lastDay : max), list[0].lastDay) : null;
+		function finish(state, cur, next, upcoming) {
+			// Warn ahead of time only when the data will run out *without* a summer
+			// to cover the gap; a calendar ending in "Sommarlovet börjar" is the
+			// normal shape and the sun handles it.
+			const endsInSummer = last && last.openEnded;
+			const staleWarning =
+				(state === "before" || state === "during") &&
+				!endsInSummer &&
+				lastDataDay !== null &&
+				diffDays(today, lastDataDay) <= opts.staleWarningDays;
+			return { state, current: cur, next, upcoming, staleWarning, lastDataDay };
+		}
+	}
 
-		let state = "none";
-		if (current) state = "during";
-		else if (next) state = "before";
+	/* -------------------------------------------------------------- the bar */
 
-		const staleWarning = state !== "none" && lastDataDay !== null && diffDays(today, lastDataDay) <= opts.staleWarningDays;
+	/**
+	 * Above this many days the bar is drawn continuous instead of one segment
+	 * per day. At a typical MagicMirror column width (~300–400 px) 14 segments
+	 * with small gaps are still ~20 px blocks you can count from across a room;
+	 * jullov (~25 days) would be slivers, and nobody counts 25 blocks anyway.
+	 * Two weeks is also where "how many days" stops being something you see
+	 * and becomes something you read — which the big number already does.
+	 */
+	const MAX_SEGMENTS = 14;
 
-		return { state, current, next, upcoming, staleWarning, lastDataDay };
+	/**
+	 * Remaining-days bar for a bounded holiday.
+	 * Day i of the holiday is segment i; days already over are dark, today and
+	 * the days after it are lit. First day: all lit. Last day: exactly one.
+	 * Full width is constant so the proportion stays visible.
+	 */
+	function barModel(h, today) {
+		const total = diffDays(h.freeFrom, h.lastDay) + 1;
+		const remaining = Math.min(total, Math.max(0, diffDays(today, h.lastDay) + 1));
+		const elapsed = total - remaining;
+		const segmented = total <= MAX_SEGMENTS;
+		return {
+			total,
+			remaining,
+			segmented,
+			segments: segmented ? Array.from({ length: total }, (_, i) => i >= elapsed) : null,
+			litFraction: total > 0 ? remaining / total : 0
+		};
 	}
 
 	/* ------------------------------------------------------------- phrasing */
@@ -270,74 +344,68 @@
 		return `${d} ${MONTHS_SHORT[m - 1]}`;
 	}
 
-	function formatRange(h) {
-		if (h.openEnded) return `från ${formatShort(h.start)}`;
-		if (h.start === h.lastDay) return formatShort(h.start);
-		return `${formatShort(h.start)} – ${formatShort(h.lastDay)}`;
-	}
-
-	function plural(n, one, many) {
-		return n === 1 ? one : many;
-	}
-
 	/**
-	 * Copy for the waiting state.
-	 * Returns { big, unit, line, sub } — `big` is the hero number or word.
+	 * Waiting state. The number is the hero; `line` says what it counts.
+	 * `h` must come from computeView (it needs `freeFrom`).
+	 * Returns { big, line, sub, days }.
 	 */
 	function phraseBefore(h, today) {
-		const days = diffDays(today, h.start);
+		const days = diffDays(today, h.freeFrom);
 		const def = definite(h.name);
-		const sub = h.openEnded ? `${capitalize(def)} börjar ${formatLong(h.start)}` : capitalize(formatLong(h.start));
+		const sub = `Ledigt från ${formatLong(h.freeFrom)}`;
 		if (days === 1) {
-			return { big: "Imorgon", unit: "", line: `är det ${h.name.toLowerCase()}! 🎉`, sub, days };
+			return { big: "1", line: `dag kvar – imorgon är det ${h.name.toLowerCase()}! 🎉`, sub, days };
 		}
-		let line = `kvar till ${def}`;
-		if (days <= 6) line += ` – på ${WEEKDAYS[weekday(h.start)]}!`;
-		else line += "!";
-		return { big: String(days), unit: plural(days, "dag", "dagar"), line, sub, days };
+		let line = `dagar kvar till ${def}`;
+		line += days <= 6 ? ` – på ${WEEKDAYS[weekday(h.freeFrom)]}!` : "!";
+		return { big: String(days), line, sub, days };
 	}
 
 	/**
-	 * Copy for the holiday itself. Remaining days count today.
-	 * Returns { banner, big, unit, line, sub, progress }.
+	 * Holiday state. The big number is days *left of the holiday*, today
+	 * included, and the copy says so ("lovdagar kvar") so it cannot be read
+	 * as a countdown. Returns { banner, big, line, sub, remaining }.
 	 */
 	function phraseDuring(h, today) {
-		const def = definite(h.name);
-		if (h.openEnded) {
-			const started = h.start === today;
-			return {
-				banner: started ? `Idag börjar ${def}!` : `Det är ${h.name.toLowerCase()}!`,
-				big: "Glad sommar!",
-				unit: "",
-				line: started ? "Äntligen – njut av ledigheten 🥳" : "Njut av ledigheten 🌊",
-				sub: null,
-				progress: null
-			};
-		}
-		const total = diffDays(h.start, h.lastDay) + 1;
 		const remaining = diffDays(today, h.lastDay) + 1;
-		const progress = Math.min(1, Math.max(0, (total - remaining + 1) / total));
-		const banner = h.start === today ? `Idag börjar ${def}!` : `Det är ${h.name.toLowerCase()}!`;
-		if (remaining === 1) {
-			return { banner, big: "Sista lovdagen!", unit: "", line: "Gör något roligt idag 🥳", sub: null, progress, remaining };
-		}
-		return {
-			banner,
-			big: String(remaining),
-			unit: "lovdagar kvar",
-			line: remaining === 2 ? "Imorgon är sista lovdagen" : `Ledigt t.o.m. ${formatLong(h.lastDay)}`,
-			sub: null,
-			progress,
-			remaining
-		};
+		const name = h.name.toLowerCase();
+		const banner = today === h.freeFrom ? `Äntligen ${name}!` : `Det är ${name}!`;
+		let line = "lovdagar kvar";
+		if (remaining === 1) line = "lovdag kvar – sista dagen! 🥳";
+		else if (remaining === 2) line = "lovdagar kvar – imorgon är sista dagen";
+		return { banner, big: String(remaining), line, sub: `Ledigt t.o.m. ${formatLong(h.lastDay)}`, remaining };
 	}
 
-	/** Short "om 3 dagar" / "imorgon" for the upcoming list. */
+	/** The sun. Returns { title, line }. */
+	function phraseSummer(h, today) {
+		if (today === h.freeFrom) {
+			return { title: `Idag börjar ${definite(h.name)}!`, line: "Äntligen – njut av ledigheten! 🥳" };
+		}
+		return { title: "Glad sommar!", line: "Sommarlovet är här – njut av ledigheten 🌊" };
+	}
+
+	/** Upcoming list wording, countdown-framed: "om 128 dagar", "imorgon", "på lördag". */
 	function phraseUntil(h, today) {
-		const days = diffDays(today, h.start);
+		const days = diffDays(today, h.freeFrom);
 		if (days === 1) return "imorgon";
-		if (days < 7) return `på ${WEEKDAYS[weekday(h.start)]}`;
+		if (days < 7) return `på ${WEEKDAYS[weekday(h.freeFrom)]}`;
 		return `om ${days} dagar`;
+	}
+
+	/** Today's date as "YYYY-MM-DD" in the given IANA time zone (default Stockholm). */
+	function todayIn(timeZone, now) {
+		const date = now || new Date();
+		try {
+			// en-CA formats as YYYY-MM-DD.
+			return new Intl.DateTimeFormat("en-CA", {
+				timeZone: timeZone || "Europe/Stockholm",
+				year: "numeric",
+				month: "2-digit",
+				day: "2-digit"
+			}).format(date);
+		} catch {
+			return localDateString(date);
+		}
 	}
 
 	/** "huddinge" from "Huddinge", "Upplands Väsby" -> "upplands-vasby" (skollov.nu's slugs). */
@@ -361,13 +429,17 @@
 		parseICS,
 		toHolidays,
 		lastDayOf,
+		freeFrom,
 		computeView,
+		barModel,
+		MAX_SEGMENTS,
 		phraseBefore,
 		phraseDuring,
+		phraseSummer,
 		phraseUntil,
+		todayIn,
 		formatLong,
 		formatShort,
-		formatRange,
 		definite,
 		slugify,
 		TYPES
