@@ -326,6 +326,10 @@
 		return s.charAt(0).toUpperCase() + s.slice(1);
 	}
 
+	function plural(n, one, many) {
+		return n === 1 ? one : many;
+	}
+
 	/** "jullovet", "sommarlovet"; anything not ending in -lov is just lowercased. */
 	function definite(name) {
 		const lower = name.toLowerCase();
@@ -349,12 +353,13 @@
 	 * `h` must come from computeView (it needs `freeFrom`).
 	 * Returns { big, line, sub, days }.
 	 */
-	function phraseBefore(h, today) {
+	function phraseBefore(h, today, opts) {
 		const days = diffDays(today, h.freeFrom);
-		const def = definite(h.name);
+		const len = lengthSuffix(h, opts);
+		const def = definite(h.name) + len;
 		const sub = `Ledigt från ${formatLong(h.freeFrom)}`;
 		if (days === 1) {
-			return { big: "1", line: `dag kvar – imorgon är det ${h.name.toLowerCase()}! 🎉`, sub, days };
+			return { big: "1", line: `dag kvar – imorgon är det ${h.name.toLowerCase()}${len}! 🎉`, sub, days };
 		}
 		let line = `dagar kvar till ${def}`;
 		line += days <= 6 ? ` – på ${WEEKDAYS[weekday(h.freeFrom)]}!` : "!";
@@ -366,14 +371,35 @@
 	 * included, and the copy says so ("lovdagar kvar") so it cannot be read
 	 * as a countdown. Returns { banner, big, line, sub, remaining }.
 	 */
-	function phraseDuring(h, today) {
+	function phraseDuring(h, today, opts) {
 		const remaining = diffDays(today, h.lastDay) + 1;
-		const name = h.name.toLowerCase();
+		const name = h.name.toLowerCase() + lengthSuffix(h, opts);
 		const banner = today === h.freeFrom ? `Äntligen ${name}!` : `Det är ${name}!`;
 		let line = "lovdagar kvar";
 		if (remaining === 1) line = "lovdag kvar – sista dagen! 🥳";
 		else if (remaining === 2) line = "lovdagar kvar – imorgon är sista dagen";
 		return { banner, big: String(remaining), line, sub: `Ledigt t.o.m. ${formatLong(h.lastDay)}`, remaining };
+	}
+
+	/**
+	 * Length of a lov in days, counted like the bar: from the first free day
+	 * (freeFrom) through the last day. Null for the open-ended summer marker.
+	 */
+	function lengthDays(h) {
+		if (h.openEnded) return null;
+		return diffDays(h.freeFrom || h.start, h.lastDay) + 1;
+	}
+
+	/** " (7 dagar)" when opts.showLength is set and the lov has a length; otherwise "". */
+	function lengthSuffix(h, opts) {
+		if (!opts || !opts.showLength) return "";
+		const n = lengthDays(h);
+		return n === null ? "" : ` (${n} ${plural(n, "dag", "dagar")})`;
+	}
+
+	/** Name for the upcoming list: "Sportlov (7 dagar)". */
+	function displayName(h, opts) {
+		return h.name + lengthSuffix(h, opts);
 	}
 
 	/** The sun. Returns { title, line }. */
@@ -437,6 +463,8 @@
 		phraseDuring,
 		phraseSummer,
 		phraseUntil,
+		lengthDays,
+		displayName,
 		todayIn,
 		formatLong,
 		formatShort,

@@ -310,6 +310,34 @@ test("today is computed in Europe/Stockholm", () => {
 	assert.equal(core.todayIn("Europe/Stockholm", new Date("2027-07-01T22:00:00Z")), "2027-07-02");
 });
 
+/* ------------------------------------------------------------ showLength */
+
+test("showLength: lov length in parentheses after the name", () => {
+	const on = { showLength: true };
+	const v = view("2026-11-22", { maxUpcoming: 3 });
+	assert.equal(core.phraseBefore(v.next, "2026-11-22", on).line, "dagar kvar till jullovet (25 dagar)!");
+	assert.deepEqual(
+		v.upcoming.map((h) => core.displayName(h, on)),
+		["Sportlov (7 dagar)", "Påsklov (4 dagar)", "Sommarlov"] // summer has no end: no length
+	);
+	const sport = v.upcoming[0];
+	assert.equal(core.phraseBefore(sport, "2027-02-26", on).line, "dag kvar – imorgon är det sportlov (7 dagar)! 🎉");
+	assert.equal(core.phraseBefore(sport, "2027-02-24", on).line, "dagar kvar till sportlovet (7 dagar) – på lördag!");
+	assert.equal(core.phraseDuring(sport, "2027-03-02", on).banner, "Det är sportlov (7 dagar)!");
+	assert.equal(core.phraseDuring(sport, "2027-02-27", on).banner, "Äntligen sportlov (7 dagar)!");
+});
+
+test("showLength: length follows the weekend rule, and is off when not asked for", () => {
+	const off = view("2026-11-22", { maxUpcoming: 3, includeWeekendBefore: false });
+	assert.equal(core.displayName(off.upcoming[0], { showLength: true }), "Sportlov (5 dagar)");
+	assert.equal(core.lengthDays(vh("autumn")), 7); // lör 24 – fre 30 okt
+	assert.equal(core.lengthDays(vh("summer")), null);
+	assert.equal(core.displayName(vh("sport"), {}), "Sportlov");
+	assert.equal(core.phraseBefore(vh("christmas"), "2026-11-22").line, "dagar kvar till jullovet!");
+	const one = { name: "Lovdag", openEnded: false, freeFrom: "2027-05-14", lastDay: "2027-05-14" };
+	assert.equal(core.displayName(one, { showLength: true }), "Lovdag (1 dag)");
+});
+
 test("slugify matches skollov.nu slugs", () => {
 	assert.equal(core.slugify("Huddinge"), "huddinge");
 	assert.equal(core.slugify("Upplands Väsby"), "upplands-vasby");

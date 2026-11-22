@@ -17,15 +17,15 @@ Rendered from the real Huddinge 2026/2027 calendar, using `debugDate` to show ea
 
 <table>
 <tr>
-<td align="center" width="50%"><img src="docs/before.png" alt="Countdown: Christmas tree emoji, 26, dagar kvar till jullovet, with Sportlov, Påsklov and Sommarlov listed below as om 97, 128 and 200 dagar" width="100%"><br><sub><b>Before a lov</b>: 22 Nov 2026, 26 days to jullov</sub></td>
-<td align="center" width="50%"><img src="docs/tomorrow.png" alt="Countdown: skier emoji, 1, dag kvar – imorgon är det sportlov" width="100%"><br><sub><b>The day before</b>: Fri 26 Feb 2027, free from Saturday</sub></td>
+<td align="center" width="50%"><img src="docs/before.png" alt="Countdown: Christmas tree emoji, 26, dagar kvar till jullovet (25 dagar), with Sportlov (7 dagar), Påsklov (4 dagar) and Sommarlov listed below as om 97, 128 and 200 dagar" width="100%"><br><sub><b>Before a lov</b>: 22 Nov 2026, 26 days to jullov</sub></td>
+<td align="center" width="50%"><img src="docs/tomorrow.png" alt="Countdown: skier emoji, 1, dag kvar – imorgon är det sportlov (7 dagar)" width="100%"><br><sub><b>The day before</b>: Fri 26 Feb 2027, free from Saturday</sub></td>
 </tr>
 <tr>
-<td align="center"><img src="docs/during.png" alt="During sportlov: Det är sportlov, 4 lovdagar kvar, seven-segment bar with three dark and four lit" width="100%"><br><sub><b>During sportlov</b>: 2 Mar 2027, 4 of 7 days left</sub></td>
-<td align="center"><img src="docs/lastday.png" alt="Last day of sportlov: 1 lovdag kvar – sista dagen, one lit segment of seven" width="100%"><br><sub><b>Last day</b>: 5 Mar 2027, one segment left</sub></td>
+<td align="center"><img src="docs/during.png" alt="During sportlov: Det är sportlov (7 dagar), 4 lovdagar kvar, seven-segment bar with three dark and four lit" width="100%"><br><sub><b>During sportlov</b>: 2 Mar 2027, 4 of 7 days left</sub></td>
+<td align="center"><img src="docs/lastday.png" alt="Last day of sportlov (7 dagar): 1 lovdag kvar – sista dagen, one lit segment of seven" width="100%"><br><sub><b>Last day</b>: 5 Mar 2027, one segment left</sub></td>
 </tr>
 <tr>
-<td align="center"><img src="docs/jullov.png" alt="During jullov: Det är jullov, 11 lovdagar kvar, continuous bar 11/25 lit" width="100%"><br><sub><b>Long lov</b>: 1 Jan 2027, continuous bar (11 of 25 days)</sub></td>
+<td align="center"><img src="docs/jullov.png" alt="During jullov: Det är jullov (25 dagar), 11 lovdagar kvar, continuous bar 11/25 lit" width="100%"><br><sub><b>Long lov</b>: 1 Jan 2027, continuous bar (11 of 25 days)</sub></td>
 <td align="center"><img src="docs/summer.png" alt="Summer: a large sun emoji, Glad sommar, Sommarlovet är här – njut av ledigheten" width="100%"><br><sub><b>Summer</b>: 15 Jul 2027, the sun until school restarts</sub></td>
 </tr>
 </table>
@@ -80,6 +80,7 @@ Add to `config/config.js`:
 | `summerSunUntil` | `"08-20"` | The last day (MM-DD) of the summer sun. Swedish schools restart around week 33–34, and the exact date varies by kommun. If no new läsår has been published by then, the module shows the "calendar has run out" warning instead of a sun that is no longer true. |
 | `staleWarningDays` | `30` | Only for calendars that do **not** end with a "Sommarlovet börjar" marker: warn this many days before the data runs out. The normal shape, ending in summer, is covered by the sun instead. |
 | `cacheWarningDays` | `3` | If skollov.nu has been unreachable and the module has run on cached data for this many days, say so on the mirror. |
+| `showLength` | `true` | Show how long each lov is, in parentheses after its name: "dagar kvar till jullovet (25 dagar)!", "Det är sportlov (7 dagar)!", "⛷️ Sportlov (7 dagar) om 97 dagar". The length is counted like the bar, from the first free day, so with `includeWeekendBefore` sportlov 1–5 March is 7 days. Not shown for sommarlov, which has no end date in the data. |
 | `showDates` | `false` | Show a small date line under the number ("Ledigt från lördag 27 februari", "Ledigt t.o.m. fredag 5 mars"). |
 | `animate` | `true` | Gently bouncing emoji during a lov. Also turned off automatically when the system asks for reduced motion. The bar never animates. |
 | `timeZone` | `"Europe/Stockholm"` | The time zone that decides when the day changes. The display updates once, at midnight. |

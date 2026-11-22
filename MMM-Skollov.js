@@ -24,6 +24,9 @@ Module.register("MMM-Skollov", {
 		staleWarningDays: 30,
 		cacheWarningDays: 3,
 		showDates: false,
+		// Show the lov's length after its name: "jullovet (25 dagar)".
+		// Counted from the first free day, like the bar; never for sommarlov.
+		showLength: true,
 		animate: true,
 		timeZone: "Europe/Stockholm",
 		calendarUrl: null,
@@ -147,7 +150,7 @@ Module.register("MMM-Skollov", {
 	},
 
 	renderBefore(h, today) {
-		const t = SkollovCore.phraseBefore(h, today);
+		const t = SkollovCore.phraseBefore(h, today, this.config);
 		const box = this.el("div", `skollov-main skollov-type-${h.type}`);
 		box.appendChild(this.hero(h.emoji, t.big, false));
 		box.appendChild(this.el("div", "skollov-line medium normal", t.line));
@@ -156,7 +159,7 @@ Module.register("MMM-Skollov", {
 	},
 
 	renderDuring(h, today) {
-		const t = SkollovCore.phraseDuring(h, today);
+		const t = SkollovCore.phraseDuring(h, today, this.config);
 		const box = this.el("div", `skollov-main skollov-main--during skollov-type-${h.type}`);
 		box.appendChild(this.el("div", "skollov-banner medium", t.banner));
 		box.appendChild(this.hero(h.emoji, t.big, true));
@@ -214,7 +217,7 @@ Module.register("MMM-Skollov", {
 		for (const h of list) {
 			const row = this.el("div", `skollov-up skollov-type-${h.type}`);
 			row.appendChild(this.el("span", "skollov-up-emoji", h.emoji));
-			row.appendChild(this.el("span", "skollov-up-name", h.name));
+			row.appendChild(this.el("span", "skollov-up-name", SkollovCore.displayName(h, this.config)));
 			row.appendChild(this.el("span", "skollov-up-until", SkollovCore.phraseUntil(h, today)));
 			box.appendChild(row);
 		}
