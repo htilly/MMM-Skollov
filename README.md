@@ -23,7 +23,7 @@ The module fetches at most once every 12 hours (default once a day) with an iden
 
 ```bash
 cd ~/MagicMirror/modules
-git clone git@github.com:htilly/MMM-Skollov.git
+git clone https://github.com/htilly/MMM-Skollov.git
 ```
 
 There are no npm dependencies, so there is nothing to `npm install`. Node 18 or later is required (for the built-in `fetch`); any current MagicMirror satisfies that.
