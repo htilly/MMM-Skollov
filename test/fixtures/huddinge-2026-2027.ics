@@ -1,0 +1,63 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Skollov.nu//Lovkalender//SV
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+X-WR-CALNAME:Skollov Huddinge 2026/2027
+X-WR-TIMEZONE:Europe/Stockholm
+BEGIN:VEVENT
+UID:huddinge-autumn-20261026@skollov.nu
+DTSTAMP:20261122T213220Z
+DTSTART;VALUE=DATE:20261026
+DTEND;VALUE=DATE:20261031
+SUMMARY:Höstlov – Huddinge
+DESCRIPTION:Datum från Huddinge kommun. Kontrollera alltid med din skola.
+URL:https://skollov.nu/kommun/huddinge/
+STATUS:CONFIRMED
+TRANSP:TRANSPARENT
+END:VEVENT
+BEGIN:VEVENT
+UID:huddinge-christmas-20261218@skollov.nu
+DTSTAMP:20261122T213220Z
+DTSTART;VALUE=DATE:20261218
+DTEND;VALUE=DATE:20270112
+SUMMARY:Jullov – Huddinge
+DESCRIPTION:Datum från Huddinge kommun. Kontrollera alltid med din skola.
+URL:https://skollov.nu/kommun/huddinge/
+STATUS:CONFIRMED
+TRANSP:TRANSPARENT
+END:VEVENT
+BEGIN:VEVENT
+UID:huddinge-sport-20270301@skollov.nu
+DTSTAMP:20261122T213220Z
+DTSTART;VALUE=DATE:20270301
+DTEND;VALUE=DATE:20270306
+SUMMARY:Sportlov – Huddinge
+DESCRIPTION:Datum från Huddinge kommun. Kontrollera alltid med din skola.
+URL:https://skollov.nu/kommun/huddinge/
+STATUS:CONFIRMED
+TRANSP:TRANSPARENT
+END:VEVENT
+BEGIN:VEVENT
+UID:huddinge-easter-20270330@skollov.nu
+DTSTAMP:20261122T213220Z
+DTSTART;VALUE=DATE:20270330
+DTEND;VALUE=DATE:20270403
+SUMMARY:Påsklov – Huddinge
+DESCRIPTION:Datum från Huddinge kommun. Kontrollera alltid med din skola.
+URL:https://skollov.nu/kommun/huddinge/
+STATUS:CONFIRMED
+TRANSP:TRANSPARENT
+END:VEVENT
+BEGIN:VEVENT
+UID:huddinge-summer-20270610@skollov.nu
+DTSTAMP:20261122T213220Z
+DTSTART;VALUE=DATE:20270610
+DTEND;VALUE=DATE:20270611
+SUMMARY:Sommarlovet börjar – Huddinge
+DESCRIPTION:Datum från Huddinge kommun. Kontrollera alltid med din skola.
+URL:https://skollov.nu/kommun/huddinge/
+STATUS:CONFIRMED
+TRANSP:TRANSPARENT
+END:VEVENT
+END:VCALENDAR

@@ -1,0 +1,188 @@
+/* MMM-Skollov
+ * Waiting state: calm, white-on-black like the rest of the mirror.
+ * Holiday state: warm accent, glow and a little bounce — it should look like a party.
+ * Upcoming list: secondary, smaller and dimmer.
+ */
+
+.MMM-Skollov {
+	--skollov-accent: #ffd166;
+	--skollov-warn: #f4a261;
+	--skollov-dim: #999;
+}
+
+.skollov {
+	text-align: center;
+	line-height: 1.2;
+	min-width: 14em;
+}
+
+.region.left .skollov,
+.region.right .skollov {
+	display: inline-block;
+}
+
+/* --- hero ------------------------------------------------------------- */
+
+.skollov-emoji {
+	font-size: 2.6em;
+	line-height: 1.1;
+}
+
+.skollov-name {
+	margin-top: 0.1em;
+	letter-spacing: 0.02em;
+}
+
+.skollov-count {
+	display: flex;
+	align-items: baseline;
+	justify-content: center;
+	gap: 0.3em;
+	margin: 0.1em 0;
+}
+
+.skollov-num {
+	font-size: 4.2em;
+	font-weight: 300;
+	line-height: 1;
+	font-variant-numeric: tabular-nums;
+}
+
+.skollov-num--word {
+	font-size: 2.2em;
+	font-weight: 400;
+}
+
+.skollov-unit {
+	color: #ccc;
+}
+
+.skollov-line {
+	margin-top: 0.2em;
+}
+
+.skollov-sub {
+	margin-top: 0.3em;
+}
+
+/* --- during a holiday ------------------------------------------------- */
+
+.skollov--during .skollov-hero--during {
+	padding: 0.5em 0.8em 0.6em;
+	border-radius: 0.6em;
+	background: radial-gradient(ellipse at top, rgba(255, 209, 102, 0.18), rgba(255, 209, 102, 0) 70%);
+}
+
+.skollov-banner {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0.35em;
+}
+
+.skollov-banner .skollov-emoji {
+	font-size: 1.8em;
+}
+
+.skollov--during .skollov-banner-text,
+.skollov--during .skollov-num {
+	color: var(--skollov-accent);
+	text-shadow: 0 0 0.35em rgba(255, 209, 102, 0.45);
+}
+
+.skollov--during .skollov-num--word {
+	font-size: 2em;
+}
+
+.skollov-progress {
+	width: 70%;
+	height: 0.3em;
+	margin: 0.45em auto 0.2em;
+	border-radius: 0.15em;
+	background: rgba(255, 255, 255, 0.15);
+	overflow: hidden;
+}
+
+.skollov-progress-fill {
+	height: 100%;
+	border-radius: 0.15em;
+	background: var(--skollov-accent);
+}
+
+.skollov--animate .skollov-emoji--bounce {
+	display: inline-block;
+	animation: skollov-bounce 2.4s ease-in-out infinite;
+}
+
+.skollov--animate .skollov-emoji--late {
+	animation-delay: 1.2s;
+}
+
+@keyframes skollov-bounce {
+	0%,
+	60%,
+	100% {
+		transform: translateY(0) rotate(0);
+	}
+
+	30% {
+		transform: translateY(-0.18em) rotate(-8deg);
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.skollov--animate .skollov-emoji--bounce {
+		animation: none;
+	}
+}
+
+/* --- no data / messages ----------------------------------------------- */
+
+.skollov-hero--none .skollov-emoji,
+.skollov-big-emoji {
+	font-size: 2em;
+	opacity: 0.8;
+}
+
+.skollov-hero--none .skollov-sub,
+.skollov-message,
+.skollov-note {
+	max-width: 22em;
+	margin-left: auto;
+	margin-right: auto;
+}
+
+.skollov-warning {
+	margin-top: 0.7em;
+	color: var(--skollov-warn);
+	max-width: 24em;
+	margin-left: auto;
+	margin-right: auto;
+}
+
+/* --- upcoming list (secondary) ---------------------------------------- */
+
+.skollov-upcoming {
+	margin: 0.9em auto 0;
+	border-collapse: collapse;
+	color: var(--skollov-dim);
+}
+
+.skollov-upcoming td {
+	padding: 0.1em 0.35em;
+	text-align: left;
+	white-space: nowrap;
+}
+
+.skollov-upcoming .skollov-up-emoji {
+	text-align: center;
+}
+
+.skollov-upcoming .skollov-up-name {
+	color: #bbb;
+}
+
+.skollov-upcoming .skollov-up-until {
+	text-align: right;
+	padding-left: 0.8em;
+}

@@ -1,0 +1,15 @@
+{
+  "name": "mmm-skollov",
+  "version": "1.0.0",
+  "description": "MagicMirror² module: a cheerful countdown to Swedish school holidays, from skollov.nu",
+  "main": "MMM-Skollov.js",
+  "scripts": {
+    "test": "node --test test/"
+  },
+  "keywords": ["MagicMirror", "skollov", "school holidays", "Sweden"],
+  "license": "UNLICENSED",
+  "private": true,
+  "engines": {
+    "node": ">=18"
+  }
+}
